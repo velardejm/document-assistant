@@ -1,0 +1,42 @@
+[project]
+name = "contract-assistant"
+version = "0.1.0"
+description = "RAG-powered contract assistant backend"
+requires-python = ">=3.13"
+
+dependencies = [
+    # API
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "python-multipart>=0.0.9",
+
+    # Config
+    "pydantic-settings>=2.3.0",
+    "python-dotenv>=1.0.0",
+
+    # Database
+    "supabase>=2.5.0",
+    "pgvector>=0.3.0",
+
+    # OpenAI
+    "openai>=1.35.0",
+
+    # Document processing
+    "pdfplumber>=0.11.0",
+    "python-docx>=1.1.0",
+    "pytesseract>=0.3.10",
+    "Pillow>=10.4.0",
+
+    # Google Drive
+    "google-auth>=2.30.0",
+    "google-auth-oauthlib>=1.2.0",
+    "google-api-python-client>=2.134.0",
+
+    # Notebooks
+    "jupyter>=1.0.0",
+    "ipykernel>=6.29.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
