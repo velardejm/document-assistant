@@ -1,0 +1,53 @@
+import io
+import pdfplumber
+from docx import Document
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from googleapiclient.http import MediaIoBaseDownload
+
+from config import settings
+
+SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+
+
+def get_drive_service():
+    creds = Credentials.from_authorized_user_file(settings.google_token_file, SCOPES)
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+    return build("drive", "v3", credentials=creds)
+
+
+def download_file(service, file_id: str) -> bytes:
+    request = service.files().get_media(fileId=file_id)
+    buffer = io.BytesIO()
+    downloader = MediaIoBaseDownload(buffer, request)
+    done = False
+    while not done:
+        _, done = downloader.next_chunk()
+    return buffer.getvalue()
+
+
+def extract_text_from_pdf(file_bytes: bytes, skip_pages: int = 0) -> str:
+    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+        pages = pdf.pages[skip_pages:]
+        texts = [p.extract_text() for p in pages if p.extract_text()]
+    return "\n".join(texts)
+
+
+def extract_text_from_docx(file_bytes: bytes) -> str:
+    doc = Document(io.BytesIO(file_bytes))
+    paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+    return "\n".join(paragraphs)
+
+
+def extract_text(service, file_id: str, filename: str, skip_pages: int = 0) -> str:
+    file_bytes = download_file(service, file_id)
+    ext = filename.lower().split(".")[-1]
+
+    if ext == "pdf":
+        return extract_text_from_pdf(file_bytes, skip_pages=skip_pages)
+    elif ext == "docx":
+        return extract_text_from_docx(file_bytes)
+    else:
+        raise ValueError(f"Unsupported file type: {ext}")
