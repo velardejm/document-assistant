@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+const API = process.env.NEXT_PUBLIC_API_URL;
 const PROJECTS = ["All Contracts", "QMC Heritage", "Ashghal PWA"];
 
 interface Source {
@@ -31,18 +32,15 @@ export default function Home() {
     setResult(null);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/chat/quick`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query,
-            project: project === "All Contracts" ? null : project,
-            top_k: 5,
-          }),
-        }
-      );
+      const res = await fetch(`${API}/chat/quick`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          project: project === "All Contracts" ? null : project,
+          top_k: 5,
+        }),
+      });
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       const data = await res.json();
@@ -64,9 +62,18 @@ export default function Home() {
   return (
     <main style={{ maxWidth: 800, margin: "0 auto", padding: "40px 20px" }}>
       <h1>Contract Assistant</h1>
+
+      <nav style={{ marginTop: 8, marginBottom: 32 }}>
+        <a href="/" style={{ fontSize: 14, color: "#111", marginRight: 16, fontWeight: 600 }}>
+          Quick Question
+        </a>
+        <a href="/conversation" style={{ fontSize: 14, color: "#666" }}>
+          Conversation Mode
+        </a>
+      </nav>
+
       <p style={{ color: "#666" }}>
-        Ask a question about your contracts. Answers are cited by clause
-        reference.
+        Ask a question about your contracts. Answers are cited by clause reference.
       </p>
 
       <div style={{ marginTop: 32 }}>
@@ -81,9 +88,7 @@ export default function Home() {
             style={{ padding: "8px 12px", fontSize: 14, borderRadius: 6, border: "1px solid #ccc" }}
           >
             {PROJECTS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
+              <option key={p} value={p}>{p}</option>
             ))}
           </select>
         </div>
@@ -135,16 +140,14 @@ export default function Home() {
 
       {/* Error */}
       {error && (
-        <div
-          style={{
-            marginTop: 24,
-            padding: 16,
-            backgroundColor: "#fff0f0",
-            border: "1px solid #ffcccc",
-            borderRadius: 6,
-            color: "#cc0000",
-          }}
-        >
+        <div style={{
+          marginTop: 24,
+          padding: 16,
+          backgroundColor: "#fff0f0",
+          border: "1px solid #ffcccc",
+          borderRadius: 6,
+          color: "#cc0000",
+        }}>
           {error}
         </div>
       )}
@@ -152,42 +155,31 @@ export default function Home() {
       {/* Result */}
       {result && (
         <div style={{ marginTop: 32 }}>
-          {/* Answer */}
-          <div
-            style={{
-              padding: 20,
-              backgroundColor: "#f9f9f9",
-              borderRadius: 8,
-              border: "1px solid #e5e5e5",
-              lineHeight: 1.7,
-              whiteSpace: "pre-wrap",
-            }}
-          >
+          <div style={{
+            padding: 20,
+            backgroundColor: "#f9f9f9",
+            borderRadius: 8,
+            border: "1px solid #e5e5e5",
+            lineHeight: 1.7,
+            whiteSpace: "pre-wrap",
+          }}>
             {result.answer}
           </div>
 
-          {/* Sources */}
           <div style={{ marginTop: 16 }}>
             <p style={{ fontWeight: 600, marginBottom: 8 }}>Sources</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {result.sources.map((s, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: "8px 12px",
-                    backgroundColor: "#f0f0f0",
-                    borderRadius: 6,
-                    fontSize: 13,
-                    display: "flex",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span>
-                    <strong>Clause {s.clause_ref}</strong> — {s.filename}
-                  </span>
-                  <span style={{ color: "#888" }}>
-                    {(s.similarity * 100).toFixed(1)}% match
-                  </span>
+                <div key={i} style={{
+                  padding: "8px 12px",
+                  backgroundColor: "#f0f0f0",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}>
+                  <span><strong>Clause {s.clause_ref}</strong> — {s.filename}</span>
+                  <span style={{ color: "#888" }}>{(s.similarity * 100).toFixed(1)}% match</span>
                 </div>
               ))}
             </div>
