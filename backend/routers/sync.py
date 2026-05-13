@@ -41,6 +41,14 @@ def list_documents():
         .execute()
     return result.data
 
+@router.get("/projects")
+def list_projects():
+    result = sb.table("ingested_files") \
+        .select("project") \
+        .execute()
+    projects = sorted(set(row["project"] for row in result.data if row["project"]))
+    return projects
+
 
 @router.delete("/documents/{file_id}")
 def delete_document(file_id: str):

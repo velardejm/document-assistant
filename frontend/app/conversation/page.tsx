@@ -34,11 +34,17 @@ export default function ConversationPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  const [newProject, setNewProject] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [projects, setProjects] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchSessions();
+    fetch(`${API}/sync/projects`)
+      .then((res) => res.json())
+      .then((data) => setProjects(data))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -63,13 +69,14 @@ export default function ConversationPage() {
     const res = await fetch(`${API}/chat/session`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTitle, project: null }),
+      body: JSON.stringify({ title: newTitle, project: newProject }),
     });
     const session = await res.json();
     setSessions((prev) => [session, ...prev]);
     setActiveSession(session);
     setMessages([]);
     setNewTitle("");
+    setNewProject(null);
     setCreating(false);
   }
 
@@ -170,6 +177,21 @@ export default function ConversationPage() {
                 border: "1px solid #ccc",
               }}
             />
+            <select
+              value={newProject ?? ""}
+              onChange={(e) => setNewProject(e.target.value || null)}
+              style={{
+                padding: "6px 8px",
+                fontSize: 13,
+                borderRadius: 4,
+                border: "1px solid #ccc",
+              }}
+            >
+              <option value="">All Contracts</option>
+              {projects.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
             <div style={{ display: "flex", gap: 6 }}>
               <button
                 onClick={createSession}
@@ -204,7 +226,6 @@ export default function ConversationPage() {
           </div>
         )}
 
-        {/* Nav link back to Quick Question */}
         <a href="/" style={{ fontSize: 13, color: "#666", marginTop: 8 }}>
           ← Quick Question
         </a>
@@ -224,7 +245,7 @@ export default function ConversationPage() {
           >
             {s.title}
             <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>
-              {new Date(s.updated_at).toLocaleDateString()}
+              {s.project ?? "All Contracts"} · {new Date(s.updated_at).toLocaleDateString()}
             </div>
           </div>
         ))}
@@ -237,8 +258,16 @@ export default function ConversationPage() {
           borderBottom: "1px solid #e5e5e5",
           fontWeight: 600,
           fontSize: 16,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}>
-          {activeSession ? activeSession.title : "Select or create a session"}
+          <span>{activeSession ? activeSession.title : "Select or create a session"}</span>
+          {activeSession?.project && (
+            <span style={{ fontSize: 12, fontWeight: 400, color: "#666" }}>
+              {activeSession.project}
+            </span>
+          )}
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>

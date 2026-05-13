@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
-const PROJECTS = ["All Contracts", "QMC Heritage", "Ashghal PWA"];
 
 interface Source {
   clause_ref: string;
@@ -21,9 +20,17 @@ interface Result {
 export default function Home() {
   const [query, setQuery] = useState("");
   const [project, setProject] = useState("All Contracts");
+  const [projects, setProjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`${API}/sync/projects`)
+      .then((res) => res.json())
+      .then((data) => setProjects(data))
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit() {
     if (!query.trim()) return;
@@ -67,8 +74,11 @@ export default function Home() {
         <a href="/" style={{ fontSize: 14, color: "#111", marginRight: 16, fontWeight: 600 }}>
           Quick Question
         </a>
-        <a href="/conversation" style={{ fontSize: 14, color: "#666" }}>
+        <a href="/conversation" style={{ fontSize: 14, color: "#666", marginRight: 16 }}>
           Conversation Mode
+        </a>
+        <a href="/documents" style={{ fontSize: 14, color: "#666" }}>
+          Documents
         </a>
       </nav>
 
@@ -77,7 +87,6 @@ export default function Home() {
       </p>
 
       <div style={{ marginTop: 32 }}>
-        {/* Project filter */}
         <div style={{ marginBottom: 12 }}>
           <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>
             Project
@@ -87,13 +96,13 @@ export default function Home() {
             onChange={(e) => setProject(e.target.value)}
             style={{ padding: "8px 12px", fontSize: 14, borderRadius: 6, border: "1px solid #ccc" }}
           >
-            {PROJECTS.map((p) => (
+            <option value="All Contracts">All Contracts</option>
+            {projects.map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
         </div>
 
-        {/* Question input */}
         <div style={{ marginBottom: 12 }}>
           <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>
             Question
@@ -119,7 +128,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Submit button */}
         <button
           onClick={handleSubmit}
           disabled={loading || !query.trim()}
@@ -138,7 +146,6 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Error */}
       {error && (
         <div style={{
           marginTop: 24,
@@ -152,7 +159,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Result */}
       {result && (
         <div style={{ marginTop: 32 }}>
           <div style={{
