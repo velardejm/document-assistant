@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from routers import ingest
+from routers import ingest, chat
 
 app = FastAPI(
     title="Contract Assistant",
@@ -19,6 +19,7 @@ app.add_middleware(
 )
 
 app.include_router(ingest.router)
+app.include_router(chat.router)
 
 
 @app.get("/health")
