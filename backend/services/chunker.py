@@ -12,34 +12,40 @@ def clean_text(text: str) -> str:
 
 
 def split_into_bullets(text: str) -> list[str]:
-    """
-    Split clause content into bullet-level segments.
-    Handles: (a), (b), •, -, numbered lists like 1., 2.
-    Falls back to the whole text if no bullets detected.
-    """
     lines = text.split('\n')
     segments = []
     current = []
 
     for line in lines:
         stripped = line.strip()
-        is_bullet = bool(re.match(r'^(\([a-zA-Z0-9]+\)|•|-|\d+\.)\s+', stripped))
+        
+        # Skip empty lines
+        if not stripped:
+            continue
 
-        if is_bullet and current:
+        is_bullet = bool(re.match(
+            r'^(\uf0b7|\uf0a7|\u2022|\u2023|\u25e6|•|-|\*|\([a-zA-Z0-9]+\)|\d+\.)\s*',
+            stripped
+        ))
+
+        # Also treat a lone bullet character as a bullet marker
+        is_lone_bullet = stripped in ('\uf0b7', '\uf0a7', '\u2022', '•', '-', '*')
+
+        if (is_bullet or is_lone_bullet) and current:
             joined = ' '.join(current).strip()
             if joined:
                 segments.append(joined)
-            current = [stripped]
+            current = [] if is_lone_bullet else [stripped]
+        elif is_lone_bullet:
+            current = []
         else:
-            if stripped:
-                current.append(stripped)
+            current.append(stripped)
 
     if current:
         joined = ' '.join(current).strip()
         if joined:
             segments.append(joined)
 
-    # If no bullets found, return the whole text as one segment
     return segments if len(segments) > 1 else [text.strip()]
 
 

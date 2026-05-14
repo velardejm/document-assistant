@@ -35,6 +35,8 @@ dependencies = [
     # Notebooks
     "jupyter>=1.0.0",
     "ipykernel>=6.29.0",
+
+    "pymupdf>=1.24.0",
 ]
 
 [build-system]

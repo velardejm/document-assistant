@@ -5,6 +5,7 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.http import MediaIoBaseDownload
+import fitz
 
 from config import settings
 
@@ -28,12 +29,22 @@ def download_file(service, file_id: str) -> bytes:
     return buffer.getvalue()
 
 
-def extract_text_from_pdf(file_bytes: bytes, skip_pages: int = 0) -> str:
-    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-        pages = pdf.pages[skip_pages:]
-        texts = [p.extract_text() for p in pages if p.extract_text()]
-    return "\n".join(texts)
+# def extract_text_from_pdf(file_bytes: bytes, skip_pages: int = 0) -> str:
+#     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+#         pages = pdf.pages[skip_pages:]
+#         texts = [p.extract_text() for p in pages if p.extract_text()]
+#     return "\n".join(texts)
 
+def extract_text_from_pdf(file_bytes: bytes, skip_pages: int = 0) -> str:
+    doc = fitz.open(stream=file_bytes, filetype="pdf")
+    pages = []
+    for i, page in enumerate(doc):
+        if i < skip_pages:
+            continue
+        text = page.get_text()
+        if text.strip():
+            pages.append(text)
+    return "\n".join(pages)
 
 def extract_text_from_docx(file_bytes: bytes) -> str:
     doc = Document(io.BytesIO(file_bytes))
