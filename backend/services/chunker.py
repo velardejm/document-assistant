@@ -11,7 +11,39 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
-def chunk_by_clauses(text: str, max_tokens: int = 1500) -> list[dict]:
+def split_into_bullets(text: str) -> list[str]:
+    """
+    Split clause content into bullet-level segments.
+    Handles: (a), (b), •, -, numbered lists like 1., 2.
+    Falls back to the whole text if no bullets detected.
+    """
+    lines = text.split('\n')
+    segments = []
+    current = []
+
+    for line in lines:
+        stripped = line.strip()
+        is_bullet = bool(re.match(r'^(\([a-zA-Z0-9]+\)|•|-|\d+\.)\s+', stripped))
+
+        if is_bullet and current:
+            joined = ' '.join(current).strip()
+            if joined:
+                segments.append(joined)
+            current = [stripped]
+        else:
+            if stripped:
+                current.append(stripped)
+
+    if current:
+        joined = ' '.join(current).strip()
+        if joined:
+            segments.append(joined)
+
+    # If no bullets found, return the whole text as one segment
+    return segments if len(segments) > 1 else [text.strip()]
+
+
+def chunk_by_clauses(text: str, max_tokens: int = 400) -> list[dict]:
     text = clean_text(text)
 
     # Match clause headers like "1.1", "2.3", "12.4" at start of line
@@ -30,11 +62,54 @@ def chunk_by_clauses(text: str, max_tokens: int = 1500) -> list[dict]:
         if len(content) < 50:
             continue
 
-        # Sub-chunk if too long
         words = content.split()
-        if len(words) > max_tokens:
+
+        # If clause fits within max_tokens, store as single chunk
+        if len(words) <= max_tokens:
+            chunks.append({
+                "clause_ref": clause_ref,
+                "clause_title": clause_title,
+                "content": content,
+                "char_start": start,
+                "char_end": end,
+            })
+            continue
+
+        # Clause is too long — try bullet-level splitting first
+        bullets = split_into_bullets(content)
+
+        if len(bullets) > 1:
+            # Store each bullet as its own chunk
+            for j, bullet in enumerate(bullets):
+                bullet = bullet.strip()
+                if len(bullet) < 30:
+                    continue
+                bullet_words = bullet.split()
+                # If a single bullet is still too long, sub-chunk by tokens
+                if len(bullet_words) > max_tokens:
+                    step = max_tokens
+                    overlap = 50
+                    for k in range(0, len(bullet_words), step - overlap):
+                        sub = " ".join(bullet_words[k:k + step])
+                        chunks.append({
+                            "clause_ref": f"{clause_ref} (bullet {j+1} part {k // (step - overlap) + 1})",
+                            "clause_title": clause_title,
+                            "content": sub,
+                            "char_start": start,
+                            "char_end": end,
+                        })
+                else:
+                    chunks.append({
+                        "clause_ref": f"{clause_ref} (bullet {j+1})",
+                        "clause_title": clause_title,
+                        "content": bullet,
+                        "char_start": start,
+                        "char_end": end,
+                    })
+        else:
+            # No bullets found — fall back to token-size sub-chunking
             step = max_tokens
-            overlap = 100
+            overlap = 50
             for j in range(0, len(words), step - overlap):
                 sub_content = " ".join(words[j:j + step])
                 chunks.append({
@@ -44,13 +119,5 @@ def chunk_by_clauses(text: str, max_tokens: int = 1500) -> list[dict]:
                     "char_start": start,
                     "char_end": end,
                 })
-        else:
-            chunks.append({
-                "clause_ref": clause_ref,
-                "clause_title": clause_title,
-                "content": content,
-                "char_start": start,
-                "char_end": end,
-            })
 
     return chunks
