@@ -34,17 +34,11 @@ export default function ConversationPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [newProject, setNewProject] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [projects, setProjects] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchSessions();
-    fetch(`${API}/sync/projects`)
-      .then((res) => res.json())
-      .then((data) => setProjects(data))
-      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -69,14 +63,13 @@ export default function ConversationPage() {
     const res = await fetch(`${API}/chat/session`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTitle, project: newProject }),
+      body: JSON.stringify({ title: newTitle, project: null }),
     });
     const session = await res.json();
     setSessions((prev) => [session, ...prev]);
     setActiveSession(session);
     setMessages([]);
     setNewTitle("");
-    setNewProject(null);
     setCreating(false);
   }
 
@@ -134,9 +127,10 @@ export default function ConversationPage() {
 
   return (
     <div style={{ display: "flex", height: "100vh", fontFamily: "sans-serif" }}>
+
       {/* Sidebar */}
       <div style={{
-        width: 260,
+        width: 270,
         borderRight: "1px solid #e5e5e5",
         display: "flex",
         flexDirection: "column",
@@ -144,8 +138,21 @@ export default function ConversationPage() {
         gap: 8,
         overflowY: "auto",
       }}>
+        {/* Branding */}
+        <div style={{ marginBottom: 4 }}>
+          <p style={{ fontWeight: 700, fontSize: 14, margin: 0 }}>SCL Protocol Assistant</p>
+          <p style={{ fontSize: 11, color: "#999", margin: "2px 0 0" }}>Conversation Mode</p>
+        </div>
+
+        {/* Nav */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid #f0f0f0" }}>
+          <a href="/" style={{ fontSize: 13, color: "#666" }}>← Quick Question</a>
+          <a href="/documents" style={{ fontSize: 13, color: "#666" }}>Documents</a>
+        </div>
+
+        {/* Sessions header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <strong>Sessions</strong>
+          <strong style={{ fontSize: 13 }}>Sessions</strong>
           <button
             onClick={() => setCreating(true)}
             style={{
@@ -162,6 +169,7 @@ export default function ConversationPage() {
           </button>
         </div>
 
+        {/* New session input */}
         {creating && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <input
@@ -177,33 +185,13 @@ export default function ConversationPage() {
                 border: "1px solid #ccc",
               }}
             />
-            <select
-              value={newProject ?? ""}
-              onChange={(e) => setNewProject(e.target.value || null)}
-              style={{
-                padding: "6px 8px",
-                fontSize: 13,
-                borderRadius: 4,
-                border: "1px solid #ccc",
-              }}
-            >
-              <option value="">All Contracts</option>
-              {projects.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
             <div style={{ display: "flex", gap: 6 }}>
               <button
                 onClick={createSession}
                 style={{
-                  flex: 1,
-                  padding: "4px 0",
-                  fontSize: 12,
-                  backgroundColor: "#111",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: "pointer",
+                  flex: 1, padding: "4px 0", fontSize: 12,
+                  backgroundColor: "#111", color: "#fff",
+                  border: "none", borderRadius: 4, cursor: "pointer",
                 }}
               >
                 Create
@@ -211,13 +199,9 @@ export default function ConversationPage() {
               <button
                 onClick={() => setCreating(false)}
                 style={{
-                  flex: 1,
-                  padding: "4px 0",
-                  fontSize: 12,
-                  backgroundColor: "#eee",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: "pointer",
+                  flex: 1, padding: "4px 0", fontSize: 12,
+                  backgroundColor: "#eee", border: "none",
+                  borderRadius: 4, cursor: "pointer",
                 }}
               >
                 Cancel
@@ -226,10 +210,7 @@ export default function ConversationPage() {
           </div>
         )}
 
-        <a href="/" style={{ fontSize: 13, color: "#666", marginTop: 8 }}>
-          ← Quick Question
-        </a>
-
+        {/* Session list */}
         {sessions.map((s) => (
           <div
             key={s.id}
@@ -245,36 +226,61 @@ export default function ConversationPage() {
           >
             {s.title}
             <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>
-              {s.project ?? "All Contracts"} · {new Date(s.updated_at).toLocaleDateString()}
+              {new Date(s.updated_at).toLocaleDateString()}
             </div>
           </div>
         ))}
+
+        {/* Bottom disclaimer */}
+        <div style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
+          <p style={{ fontSize: 11, color: "#bbb", lineHeight: 1.5, margin: 0 }}>
+            Powered by GPT-4o mini · SCL Protocol 2nd Ed. (2017)
+          </p>
+          <p style={{ fontSize: 11, color: "#bbb", lineHeight: 1.5, margin: "4px 0 0" }}>
+            Non-commercial demo · Not affiliated with or endorsed by the{" "}
+            <a href="https://www.scl.org.uk" target="_blank" rel="noopener noreferrer" style={{ color: "#bbb" }}>
+              SCL
+            </a>
+            . Verify all answers against the{" "}
+            <a href="https://www.scl.org.uk/resources/delay-disruption-protocol" target="_blank" rel="noopener noreferrer" style={{ color: "#bbb" }}>
+              original document
+            </a>
+            .
+          </p>
+        </div>
       </div>
 
       {/* Main chat area */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+
+        {/* Chat header */}
         <div style={{
-          padding: "16px 24px",
+          padding: "14px 24px",
           borderBottom: "1px solid #e5e5e5",
-          fontWeight: 600,
-          fontSize: 16,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
         }}>
-          <span>{activeSession ? activeSession.title : "Select or create a session"}</span>
-          {activeSession?.project && (
-            <span style={{ fontSize: 12, fontWeight: 400, color: "#666" }}>
-              {activeSession.project}
-            </span>
+          <span style={{ fontWeight: 600, fontSize: 15 }}>
+            {activeSession ? activeSession.title : "Select or create a session"}
+          </span>
+          {activeSession && (
+            <span style={{ fontSize: 12, color: "#999" }}>SCL Protocol 2nd Ed.</span>
           )}
         </div>
 
+        {/* Messages */}
         <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
           {!activeSession && (
-            <p style={{ color: "#999", textAlign: "center", marginTop: 60 }}>
-              Select a session from the sidebar or create a new one.
-            </p>
+            <div style={{ textAlign: "center", marginTop: 60 }}>
+              <p style={{ color: "#999", marginBottom: 8 }}>
+                Select a session or create a new one to start.
+              </p>
+              <p style={{ color: "#bbb", fontSize: 12, maxWidth: 400, margin: "0 auto" }}>
+                Ask multi-turn questions about the SCL Delay and Disruption Protocol.
+                Answers cite the relevant sections of the Protocol.
+              </p>
+            </div>
           )}
 
           {messages.map((m) => (
@@ -310,7 +316,7 @@ export default function ConversationPage() {
                       fontSize: 11,
                       color: "#1a56db",
                     }}>
-                      Clause {s.clause_ref}
+                      Section {s.clause_ref}
                     </span>
                   ))}
                 </div>
@@ -319,54 +325,59 @@ export default function ConversationPage() {
           ))}
 
           {loading && (
-            <div style={{ color: "#999", fontSize: 13, fontStyle: "italic" }}>
-              Thinking...
-            </div>
+            <div style={{ color: "#999", fontSize: 13, fontStyle: "italic" }}>Thinking...</div>
           )}
           <div ref={bottomRef} />
         </div>
 
+        {/* Input area */}
         {activeSession && (
           <div style={{
             padding: "16px 24px",
             borderTop: "1px solid #e5e5e5",
             display: "flex",
-            gap: 12,
+            flexDirection: "column",
+            gap: 8,
           }}>
-            <textarea
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask a question... (Enter to send, Shift+Enter for new line)"
-              rows={2}
-              disabled={loading}
-              style={{
-                flex: 1,
-                padding: "10px 12px",
-                fontSize: 14,
-                borderRadius: 6,
-                border: "1px solid #ccc",
-                resize: "none",
-                boxSizing: "border-box",
-              }}
-            />
-            <button
-              onClick={sendMessage}
-              disabled={loading || !query.trim()}
-              style={{
-                padding: "10px 20px",
-                fontSize: 14,
-                fontWeight: 600,
-                backgroundColor: loading ? "#999" : "#111",
-                color: "#fff",
-                border: "none",
-                borderRadius: 6,
-                cursor: loading ? "not-allowed" : "pointer",
-                alignSelf: "flex-end",
-              }}
-            >
-              {loading ? "..." : "Send"}
-            </button>
+            <div style={{ display: "flex", gap: 12 }}>
+              <textarea
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about the SCL Protocol... (Enter to send, Shift+Enter for new line)"
+                rows={2}
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  padding: "10px 12px",
+                  fontSize: 14,
+                  borderRadius: 6,
+                  border: "1px solid #ccc",
+                  resize: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={loading || !query.trim()}
+                style={{
+                  padding: "10px 20px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  backgroundColor: loading ? "#999" : "#111",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  alignSelf: "flex-end",
+                }}
+              >
+                {loading ? "..." : "Send"}
+              </button>
+            </div>
+            <p style={{ fontSize: 11, color: "#bbb", margin: 0 }}>
+              Demo only · Not legal advice · Verify all answers against the original SCL Protocol document
+            </p>
           </div>
         )}
       </div>
