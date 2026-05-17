@@ -1,11 +1,11 @@
 import io
-import pdfplumber
+import json
+import fitz  # pymupdf
 from docx import Document
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.http import MediaIoBaseDownload
-import fitz
 
 from config import settings
 
@@ -13,9 +13,24 @@ SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
 
 def get_drive_service():
-    creds = Credentials.from_authorized_user_file(settings.google_token_file, SCOPES)
+    # Production: read credentials from environment variables
+    if settings.google_credentials_json and settings.google_token_json:
+        token_data = json.loads(settings.google_token_json)
+        creds = Credentials(
+            token=token_data.get("token"),
+            refresh_token=token_data.get("refresh_token"),
+            token_uri=token_data.get("token_uri"),
+            client_id=token_data.get("client_id"),
+            client_secret=token_data.get("client_secret"),
+            scopes=token_data.get("scopes"),
+        )
+    else:
+        # Local dev: read from files
+        creds = Credentials.from_authorized_user_file(settings.google_token_file, SCOPES)
+
     if creds.expired and creds.refresh_token:
         creds.refresh(Request())
+
     return build("drive", "v3", credentials=creds)
 
 
@@ -29,12 +44,6 @@ def download_file(service, file_id: str) -> bytes:
     return buffer.getvalue()
 
 
-# def extract_text_from_pdf(file_bytes: bytes, skip_pages: int = 0) -> str:
-#     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-#         pages = pdf.pages[skip_pages:]
-#         texts = [p.extract_text() for p in pages if p.extract_text()]
-#     return "\n".join(texts)
-
 def extract_text_from_pdf(file_bytes: bytes, skip_pages: int = 0) -> str:
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     pages = []
@@ -45,6 +54,7 @@ def extract_text_from_pdf(file_bytes: bytes, skip_pages: int = 0) -> str:
         if text.strip():
             pages.append(text)
     return "\n".join(pages)
+
 
 def extract_text_from_docx(file_bytes: bytes) -> str:
     doc = Document(io.BytesIO(file_bytes))

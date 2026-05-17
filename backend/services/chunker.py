@@ -12,23 +12,25 @@ def clean_text(text: str) -> str:
 
 
 def split_into_bullets(text: str) -> list[str]:
+    """
+    Split clause content into bullet-level segments.
+    Handles: (a), (b), •, -, *, \uf0b7, \uf0a7, \u2022, numbered lists like 1., 2.
+    Falls back to the whole text if no bullets detected.
+    """
     lines = text.split('\n')
     segments = []
     current = []
 
     for line in lines:
         stripped = line.strip()
-        
-        # Skip empty lines
+
         if not stripped:
             continue
 
         is_bullet = bool(re.match(
-            r'^(\uf0b7|\uf0a7|\u2022|\u2023|\u25e6|•|-|\*|\([a-zA-Z0-9]+\)|\d+\.)\s*',
+            r'^(\uf0b7|\uf0a7|\u2022|\u2023|\u25e6|•|-|\*|\([a-zA-Z0-9]+\)|\d+\.)\s+',
             stripped
         ))
-
-        # Also treat a lone bullet character as a bullet marker
         is_lone_bullet = stripped in ('\uf0b7', '\uf0a7', '\u2022', '•', '-', '*')
 
         if (is_bullet or is_lone_bullet) and current:
@@ -52,25 +54,37 @@ def split_into_bullets(text: str) -> list[str]:
 def chunk_by_clauses(text: str, max_tokens: int = 400) -> list[dict]:
     text = clean_text(text)
 
-    # Match clause headers like "1.1", "2.3", "12.4" at start of line
-    pattern = re.compile(r'(?m)^(\d+\.\d+(?:\.\d+)?)\s+(.+)')
+    # Match clause headers:
+    # X.X or X.X.X patterns (e.g. 1.1, 10.3, 1.1.1)
+    # Also single-digit section headers at start of line (e.g. "1. Programme")
+    pattern = re.compile(
+        r'(?m)^(\d+\.\d+(?:\.\d+)?|\d+\.)\s+(.+)'
+    )
     matches = list(pattern.finditer(text))
+
+    # Filter out pure TOC lines
+    filtered_matches = []
+    for m in matches:
+        title = m.group(2).strip()
+        if re.search(r'\s+\d+$', title) and len(title.split()) <= 8:
+            continue
+        filtered_matches.append(m)
+    matches = filtered_matches
+
     chunks = []
 
     for i, match in enumerate(matches):
-        clause_ref = match.group(1)
+        clause_ref = match.group(1).rstrip('.')
         clause_title = match.group(2).strip()
         start = match.start()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         content = text[start:end].strip()
 
-        # Skip very short content (TOC remnants)
         if len(content) < 50:
             continue
 
         words = content.split()
 
-        # If clause fits within max_tokens, store as single chunk
         if len(words) <= max_tokens:
             chunks.append({
                 "clause_ref": clause_ref,
@@ -81,17 +95,14 @@ def chunk_by_clauses(text: str, max_tokens: int = 400) -> list[dict]:
             })
             continue
 
-        # Clause is too long — try bullet-level splitting first
         bullets = split_into_bullets(content)
 
         if len(bullets) > 1:
-            # Store each bullet as its own chunk
             for j, bullet in enumerate(bullets):
                 bullet = bullet.strip()
                 if len(bullet) < 30:
                     continue
                 bullet_words = bullet.split()
-                # If a single bullet is still too long, sub-chunk by tokens
                 if len(bullet_words) > max_tokens:
                     step = max_tokens
                     overlap = 50
@@ -113,7 +124,6 @@ def chunk_by_clauses(text: str, max_tokens: int = 400) -> list[dict]:
                         "char_end": end,
                     })
         else:
-            # No bullets found — fall back to token-size sub-chunking
             step = max_tokens
             overlap = 50
             for j in range(0, len(words), step - overlap):
