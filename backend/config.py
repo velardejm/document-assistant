@@ -15,10 +15,14 @@ class Settings(BaseSettings):
     supabase_url: str
     supabase_service_role_key: str
 
-    # Google Drive
+    # Google Drive — file paths (local dev)
     google_credentials_file: str = "credentials.json"
     google_token_file: str = "token.json"
     google_drive_root_folder: str = "contracts"
+
+    # Google Drive — JSON content (production/Railway)
+    google_credentials_json: str = ""
+    google_token_json: str = ""
 
     # App
     app_env: str = "development"
